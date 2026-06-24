@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"=== WORKING DIR ===\" && ls -la \"/Users/kaushikkarmakar/Downloads/AI bot\" && echo \"\" && echo \"=== ZIP EXISTS? ===\" && ls -la \"/Users/kaushikkarmakar/Downloads/AI_Brokerage_Assistant_Gap_Closure_Pack.zip\" && echo \"\" && echo \"=== DOCX EXISTS? ===\" && ls -la \"/Users/kaushikkarmakar/Downloads/AI bot/AI_Brokerage_Assistant_Roadmap_Merged.docx\")",
+      "Bash(unzip -l \"/Users/kaushikkarmakar/Downloads/AI_Brokerage_Assistant_Gap_Closure_Pack.zip\")",
+      "Read(//private/tmp/**)",
+      "Bash(python3 -)"
+    ]
+  }
+}
