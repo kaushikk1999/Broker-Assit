@@ -53,10 +53,12 @@ def chat(body: ChatRequest, request: Request, ctx: dict = Depends(require_sessio
                             debug={"cache_hit": result["cache_hit"], "data": result["data"]})
 
     result = handle_knowledge(body.message, lang, db, filters=route.get("filters"))
-    persist_turn(db, tenant_id, session_id, body.message, result["answer"], lang, route["intent"],
-                 "knowledge")
+    # Prefer the intent refined on the translated English query (precise for HI/TA); fall back to the
+    # raw-message classification if the pipeline didn't return one.
+    intent = result.get("intent") or route["intent"]
+    persist_turn(db, tenant_id, session_id, body.message, result["answer"], lang, intent, "knowledge")
     log_event(db, "chat", tenant_id, session_id, {"branch": "knowledge",
                                                   "citations": len(result["citations"])})
-    return ChatResponse(answer=result["answer"], language=lang, intent=route["intent"],
+    return ChatResponse(answer=result["answer"], language=lang, intent=intent,
                         branch="knowledge", citations=result["citations"], disclaimer=DISCLAIMER,
                         debug=result["debug"])

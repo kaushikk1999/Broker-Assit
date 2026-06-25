@@ -15,8 +15,14 @@ def get_language():
 
 
 def get_embedding():
-    """Phase 5: real embeddinggemma via Ollama Cloud when configured; mock otherwise (credential-free)."""
-    if settings.use_mocks or not settings.ollama_configured:
+    """Phase 5: real embeddinggemma via Ollama Cloud when configured; mock otherwise (credential-free).
+
+    `BA_EMBEDDING_PROVIDER` overrides the default: "mock" forces the deterministic mock even when
+    use_mocks is off (Ollama Cloud has no embedding models, so dense embeddings have no live provider);
+    "ollama" forces the real adapter; "auto" (default) uses the real adapter only when configured."""
+    if settings.embedding_provider == "mock":
+        return MockEmbedding()
+    if settings.embedding_provider != "ollama" and (settings.use_mocks or not settings.ollama_configured):
         return MockEmbedding()
     from app.adapters.ollama_cloud import OllamaCloudEmbedding
     return OllamaCloudEmbedding()

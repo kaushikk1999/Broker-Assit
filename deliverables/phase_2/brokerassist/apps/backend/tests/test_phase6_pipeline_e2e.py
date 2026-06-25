@@ -74,6 +74,8 @@ def test_tamil_query_translates_and_cites():
     assert body["language"] == "ta"
     assert any(ch in body["answer"] for ch in "அஆஇ")
     assert len(body["citations"]) >= 1
+    # intent is refined on the translated English query → same precise label as English
+    assert body["intent"] == "disclosure"
 
 
 def test_citation_fields_resolve_from_postgres():

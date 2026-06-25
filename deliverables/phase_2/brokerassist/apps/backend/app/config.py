@@ -3,12 +3,19 @@
 Phase 5 (Embedding Pipeline) adds embeddinggemma + Qdrant dual-vector settings. Canonical names follow
 the roadmap/starter-pack (e.g. BA_QDRANT_COLLECTION_NAME=brokerage_kb, BA_OLLAMA_CLOUD_API_KEY); the
 prior Phase-3 env names are kept as backward-compatible aliases via AliasChoices so nothing breaks."""
+import os
+
 from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Local dev convenience: load a `.env` file. Production injects env vars directly (no file). Tests set
+# BA_DISABLE_DOTENV=1 so a filled-in local `.env` (real vendor creds) can't flip the suite off the
+# mocks-first path or shadow the config-default assertions.
+_ENV_FILE = None if os.environ.get("BA_DISABLE_DOTENV") else ".env"
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="BA_", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_prefix="BA_", extra="ignore")
 
     app_name: str = "BrokerAssist API"
     environment: str = "local"
@@ -83,6 +90,11 @@ class Settings(BaseSettings):
         "", validation_alias=AliasChoices("BA_OLLAMA_CLOUD_API_KEY", "BA_OLLAMA_API_KEY"),
     )
     embedding_model: str = "embeddinggemma"
+    # Embedding provider selector (like marketdata_provider). "auto" = real Ollama Cloud when
+    # configured + not use_mocks, else mock. "mock" forces the deterministic mock even when use_mocks is
+    # off — needed because Ollama Cloud hosts NO embedding models, so dense embeddings have no live
+    # provider yet while generation/translation/Qdrant run for real. "ollama" forces the real adapter.
+    embedding_provider: str = "auto"  # auto | mock | ollama
     # Dimension is NEVER hardcoded — it is detected from a probe embedding. This optional override is a
     # validation assertion only. Legacy alias: BA_QDRANT_DENSE_DIM.
     embedding_dimension_override: int | None = Field(

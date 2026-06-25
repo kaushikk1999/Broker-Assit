@@ -1,5 +1,5 @@
 """Phase 6 intent taxonomy + routing fork + company-filter derivation."""
-from app.services.intent_router import classify
+from app.services.intent_router import classify, knowledge_intent
 
 
 def test_market_query_routes_to_market_no_filters():
@@ -47,3 +47,12 @@ def test_company_detected_in_english_name():
     r = classify("Tell me about National Aluminium dividends")
     assert r["filters"] == {"company": "NALCO"}
     assert r["intent"] == "disclosure"
+
+
+def test_knowledge_intent_public_sub_classifier():
+    # public sub-classifier used by the RAG pipeline on the TRANSLATED English query
+    assert knowledge_intent("NALCO quarterly result") == "disclosure"
+    assert knowledge_intent("white box vs black box algo") == "algo"
+    assert knowledge_intent("how do I open an account") == "navigation"
+    assert knowledge_intent("what is a mutual fund?") == "faq"
+    assert knowledge_intent("hello there") == "knowledge_general"
