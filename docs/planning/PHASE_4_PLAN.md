@@ -1,8 +1,13 @@
-# Phase 4 — Data Ingestion Layer (design-approved plan)
+# Phase 4 — Data Ingestion Layer (implemented)
 
-> **Status:** 🟡 **Analyzed & design-approved — NOT yet implemented.** This is the authoritative,
-> ready-to-build plan for roadmap **Phase 4**. It supersedes the older "Phase 4 = Real Vendor Adapters"
-> label that appears in some project docs (see the [phase-numbering correction](#phase-numbering-correction)).
+> **Status:** ✅ **Implemented fixtures-first (2026-06-25).** The spine below is built and credential-free:
+> `app/ingestion/` (sources + offline fixtures, `parsers.py`, `chunker.py`, `metadata.py`,
+> `registry_service.py`, `orchestrator.py` with a hard no-vector guard, `scheduler.py`),
+> `app/worker/runner.py`, an `IngestionRun` table (Alembic `0002`), and an admin-gated ingestion API.
+> Live crawl/NSE/BSE/NALCO-IR/Drive adapters are stubbed behind `BA_INGEST_LIVE` (default off). 31
+> Phase-4 tests, 141 total. This plan remains the authoritative spec for roadmap **Phase 4** and
+> supersedes the older "Phase 4 = Real Vendor Adapters" label (see the
+> [phase-numbering correction](#phase-numbering-correction)).
 >
 > **Source of truth:** `AI_Brokerage_Assistant_Roadmap_Merged` roadmap, pp. 11–16.
 > **Scope discipline:** Phase 4 stops **before** embeddings/Qdrant writes — that tail is **Phase 5**

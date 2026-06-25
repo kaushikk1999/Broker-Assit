@@ -105,8 +105,17 @@ class LLM(ABC):
 
 
 class MarketDataProvider(ABC):
-    """TrueData (primary) / Ticker / exchange feeds. Market data NEVER comes from Qdrant."""
+    """TrueData (primary) / Ticker / exchange feeds. Market data NEVER comes from Qdrant.
+
+    The full roadmap interface (Source 2A) is LTP, OHLC, market depth, option chain and a tick
+    subscription, so any provider — mock or a real REST/WebSocket vendor — is swappable behind it."""
     @abstractmethod
     def get_ltp(self, symbol: str) -> dict: ...
     @abstractmethod
     def get_ohlc(self, symbol: str) -> dict: ...
+    @abstractmethod
+    def get_market_depth(self, symbol: str) -> dict: ...
+    @abstractmethod
+    def get_option_chain(self, symbol: str) -> dict: ...
+    @abstractmethod
+    def subscribe_ticks(self, symbol: str, count: int = 1) -> list[dict]: ...

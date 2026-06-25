@@ -4,20 +4,20 @@
 stock brokerages. NALCO knowledge pilot, **mocks-first**.
 
 ## Start here
-- **Phase 5 handoff (read first):** [docs/planning/HANDOFF_TO_PHASE_5.md](docs/planning/HANDOFF_TO_PHASE_5.md)
+- **Current status (read first):** [docs/planning/PHASE_STATUS.md](docs/planning/PHASE_STATUS.md) — source of truth for what's built.
 - **Agent guide:** [docs/CLAUDE.md](docs/CLAUDE.md) — orientation + where everything lives.
-- **Current status:** [docs/planning/PHASE_STATUS.md](docs/planning/PHASE_STATUS.md)
-- **Phase 4 plan (design-approved):** [docs/planning/PHASE_4_PLAN.md](docs/planning/PHASE_4_PLAN.md)
-- **Phase 5 kickoff (structure next):** [docs/planning/PHASE_5_KICKOFF.md](docs/planning/PHASE_5_KICKOFF.md)
+- **Phase 4 plan (now implemented):** [docs/planning/PHASE_4_PLAN.md](docs/planning/PHASE_4_PLAN.md)
+- **What to build next:** [docs/planning/NEXT_PHASE_PLAN.md](docs/planning/NEXT_PHASE_PLAN.md)
 - **Full docs index:** [docs/README.md](docs/README.md)
 
 ## 30-second status
 - Code lives in `deliverables/phase_2/brokerassist/` (FastAPI backend + Next.js frontend).
-- **Phases 0–3 done & verified** (20/20 tests, full E2E). Runs **`BA_USE_MOCKS=true`** — zero credentials.
+- **Phases 0–6 implemented, mocks-first** (141/141 tests, full E2E). Runs **`BA_USE_MOCKS=true`** — zero credentials.
 - **Phase numbering (roadmap):** 4 = Data Ingestion · 5 = Embedding · 6 = RAG · 7 = Multilingual. ("Real vendor adapters" is a cross-cutting wiring workstream, not a phase.)
-- **Phase 4 — Data Ingestion Layer:** 🟡 analyzed & design-approved, **not implemented** (3 design decisions locked) → [PHASE_4_PLAN.md](docs/planning/PHASE_4_PLAN.md).
-- **Not built yet:** Phase 4 ingestion code/worker, Phase 5 embedding pipeline, real vendor adapters, standalone widget, launch hardening.
-- Next move: implement Phase 4 (fixtures-first, no creds), **or** structure Phase 5 → [PHASE_5_KICKOFF.md](docs/planning/PHASE_5_KICKOFF.md).
+- **Phase 4 — Data Ingestion Layer:** ✅ implemented fixtures-first (`app/ingestion/` + `app/worker/runner.py`; sources→parse→metadata→dedup→registry→chunk, hard stop before embeddings). Live crawl/NSE/BSE/Drive gated on `BA_INGEST_LIVE` → [PHASE_4_PLAN.md](docs/planning/PHASE_4_PLAN.md).
+- **Phase 7 — Multilingual:** 🟡 partial (Sarvam detect/translate built; transliteration/STT/TTS/UI to do).
+- **Not built yet:** live source crawls + real vendor adapters (credential-gated), standalone widget, launch hardening.
+- Next move: finish Phase 7 multilingual extras (mostly mocks-first), **or** wire a live source / real vendor (needs creds).
 
 ## Invariants — do NOT break
 1. Citations resolve from **PostgreSQL**, never Qdrant (payload = FK only).
@@ -30,7 +30,8 @@ stock brokerages. NALCO knowledge pilot, **mocks-first**.
 ## Run & verify
 ```bash
 cd deliverables/phase_2/brokerassist/apps/backend && source .venv/bin/activate
-pytest -q                                # expect: 20 passed
+pytest -q                                # expect: 141 passed
+python -m app.worker.runner --all --once # Phase 4 ingestion (offline fixtures → registry → chunks)
 uvicorn app.main:app --port 8200         # /docs, /ready
 ```
 

@@ -161,6 +161,26 @@ class DocumentAuditHistory(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+# ---------------------------------------------------------------- ingestion bookkeeping (Phase 4)
+class IngestionRun(Base):
+    """One run of the Phase 4 ingestion orchestrator for a single source. Admin-visible bookkeeping;
+    the worker writes one row per run. Phase 4 stops at chunking — no vectors are written here."""
+    __tablename__ = "ingestion_runs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(40), index=True)
+    mode: Mapped[str] = mapped_column(String(12), default="fixture")  # fixture | live
+    status: Mapped[str] = mapped_column(String(12), default="running")  # running | success | failed
+    discovered: Mapped[int] = mapped_column(Integer, default=0)
+    registered: Mapped[int] = mapped_column(Integer, default=0)
+    versioned: Mapped[int] = mapped_column(Integer, default=0)
+    duplicates: Mapped[int] = mapped_column(Integer, default=0)
+    chunks_written: Mapped[int] = mapped_column(Integer, default=0)
+    errors: Mapped[int] = mapped_column(Integer, default=0)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 # ---------------------------------------------------------------- chat persistence
 class ChatConversation(Base):
     __tablename__ = "chat_conversations"

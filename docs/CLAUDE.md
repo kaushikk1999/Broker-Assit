@@ -20,13 +20,14 @@ For *how the system works*, see [overview/ARCHITECTURE.md](overview/ARCHITECTURE
 ## 2. The 30-second status
 
 - **Code:** `deliverables/phase_2/brokerassist/` (FastAPI backend + Next.js frontend monorepo).
-- **Phases 0–3 are DONE and verified** (20/20 tests, full E2E). The pilot runs **mocks-first**
-  (`BA_USE_MOCKS=true`) with **zero credentials**.
-- **What's NOT built:** real vendor adapters, the ingestion/embedding worker, the standalone widget
-  package, production hardening.
-- **Best next move with no credentials:** scaffold the **ingestion worker**
-  ([plan §A](planning/NEXT_PHASE_PLAN.md#workstream-a--ingestion--embedding-worker--no-credentials-needed-to-scaffold)).
-- **Best next move with a vendor key:** wire that **real adapter**
+- **Phases 0–6 are implemented, mocks-first** (141/141 tests, full E2E). The pilot runs **mocks-first**
+  (`BA_USE_MOCKS=true`) with **zero credentials**. Phase 7 (Multilingual) is partial.
+- **What's NOT built:** live source crawls + real vendor adapters (credential-gated), the standalone
+  widget package, production hardening. Phase 7 extras (transliteration / STT / TTS / multilingual UI).
+- **Best next move with no credentials:** finish **Phase 7 multilingual** extras (mostly mocks-first),
+  or build the standalone widget package.
+- **Best next move with a vendor key:** wire a **live ingestion source** (`BA_INGEST_LIVE` + endpoint)
+  or a **real vendor adapter**
   ([plan §C](planning/NEXT_PHASE_PLAN.md#workstream-c--real-vendor-adapters-phase-4---needs-credentials-one-vendor-at-a-time)).
 
 ## 3. Invariants — do NOT break these
@@ -45,7 +46,8 @@ For *how the system works*, see [overview/ARCHITECTURE.md](overview/ARCHITECTURE
 cd deliverables/phase_2/brokerassist/apps/backend
 python3.11 -m venv .venv && source .venv/bin/activate   # if not already
 pip install -r requirements.txt
-pytest -q                                                # expect: 20 passed
+pytest -q                                                # expect: 141 passed
+python -m app.worker.runner --all --once                 # Phase 4 ingestion (offline fixtures)
 uvicorn app.main:app --port 8200                         # /docs, /ready
 ```
 Frontend: `cd ../frontend && npm install && npm run dev` (port 3000).
@@ -58,6 +60,7 @@ Full guide: [reference/SETUP_AND_RUN.md](reference/SETUP_AND_RUN.md). Test detai
 |---|---|
 | A vendor integration | `adapters/base.py` (interface) + `adapters/__init__.py` (factory) + a new `adapters/<vendor>.py` |
 | The RAG flow | `services/rag_pipeline.py` |
+| Data ingestion (Phase 4) | `app/ingestion/` (sources/parsers/chunker/metadata/registry/orchestrator) + `app/worker/runner.py` |
 | Routing market vs knowledge | `services/intent_router.py` |
 | Auth / sessions | `core/security.py` (widget) · `core/admin_security.py` (admin) |
 | Rate limits / quotas | `core/ratelimit.py` |

@@ -8,7 +8,7 @@ Railway service; LLM/embeddings/rerank/translation are remote calls.
 |---|---|---|
 | `frontend` | `apps/frontend` | Next.js. Env: `NEXT_PUBLIC_API_BASE` → backend URL |
 | `backend` | `apps/backend` (Dockerfile) | FastAPI. Reads `BA_*` env; start `uvicorn app.main:app` |
-| `worker` | `apps/backend` (later) | Background ingestion/embedding (deferred in pilot) |
+| `worker` | `apps/backend` | Background workers (run OFF the web process): Phase 4 ingestion `python -m app.worker.runner --all --once` (sources→registry→chunks) and Phase 5 embedding `python -m app.worker.embed_runner --once` (chunks→Qdrant). Cron cadences (`BA_INGEST_CRON_*`) live here only |
 | `postgres` | Railway plugin | `BA_DATABASE_URL` (registry, tenants, quotas, citations) |
 | `redis` | Railway plugin | `BA_REDIS_URL` (cache, rate-limit, quotas) |
 | `qdrant` | Railway template/service or Qdrant Cloud | `BA_QDRANT_URL` (dense+sparse vectors, FK payload) |

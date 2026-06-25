@@ -8,7 +8,7 @@ from app.config import settings
 from app.db.seed import seed
 from app.core.observability import configure_logging, CorrelationIdMiddleware, log
 from app.services.embedding_pipeline import embedding_startup_check
-from app.api import routes_chat, routes_meta, routes_admin, routes_modules
+from app.api import routes_chat, routes_meta, routes_admin, routes_modules, routes_ingestion
 
 
 @asynccontextmanager
@@ -44,6 +44,7 @@ app.include_router(routes_meta.router)
 app.include_router(routes_chat.router)
 app.include_router(routes_modules.router)
 app.include_router(routes_admin.router)
+app.include_router(routes_ingestion.router)
 
 
 @app.get("/")

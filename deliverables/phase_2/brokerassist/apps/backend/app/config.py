@@ -134,6 +134,26 @@ class Settings(BaseSettings):
     chunk_size: int = 500
     chunk_overlap: int = 100
 
+    # ---------------------------------------------------------------- Phase 4 — Data Ingestion Layer
+    # Master switch for LIVE source adapters (real crawl / NSE / BSE / NALCO IR / Google Drive). OFF by
+    # default so the full pipeline runs on deterministic offline fixtures — credential- and network-free
+    # (mocks-first invariant). When false, the live adapters refuse to fetch.
+    ingest_live: bool = False
+    # Per-source endpoints (only used when ingest_live=true). Empty => that live source is unconfigured.
+    broker_site_url: str = ""
+    nse_base_url: str = "https://www.nseindia.com"
+    bse_base_url: str = "https://www.bseindia.com"
+    nalco_ir_url: str = "https://nalcoindia.com"
+    gdrive_folder_id: str = ""
+    gdrive_credentials_json: str = ""
+    # Refresh cadences (cron) wired in the Railway WORKER only — never the web process (P4-D3). The
+    # scheduler abstraction parses these; run-once commands ignore them. Defaults mirror roadmap p. 31.
+    ingest_cron_broker: str = "0 2 * * *"     # Broker website — daily @ 02:00
+    ingest_cron_nse: str = "0 * * * *"        # NSE corporate filings — hourly
+    ingest_cron_bse: str = "0 * * * *"        # BSE — hourly
+    ingest_cron_nalco: str = "0 3 * * *"      # NALCO IR — daily @ 03:00
+    ingest_cron_gdrive: str = "*/15 * * * *"  # Google Drive — every 15 minutes
+
     @property
     def language_codes(self) -> list[str]:
         return [c.strip() for c in self.metadata_language_codes.split(",") if c.strip()]
@@ -141,6 +161,17 @@ class Settings(BaseSettings):
     @property
     def filing_types(self) -> list[str]:
         return [c.strip() for c in self.metadata_filing_types.split(",") if c.strip()]
+
+    @property
+    def ingest_cadences(self) -> dict[str, str]:
+        """Source -> cron cadence map (roadmap refresh schedule). Consumed by the worker scheduler."""
+        return {
+            "broker_site": self.ingest_cron_broker,
+            "nse": self.ingest_cron_nse,
+            "bse": self.ingest_cron_bse,
+            "nalco_ir": self.ingest_cron_nalco,
+            "gdrive": self.ingest_cron_gdrive,
+        }
 
     @property
     def qdrant_configured(self) -> bool:

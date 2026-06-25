@@ -30,12 +30,16 @@ log, and the information inventory under `deliverables/phase_2/discovery/`.
 | ADR-004 | Intent-routing fork **before** retrieval (market never touches Qdrant) |
 | ADR-005 | Abuse/cost control **before** any model call |
 
-### Phase 4 — Data Ingestion Layer (design-approved 2026-06-24; see [PHASE_4_PLAN.md](PHASE_4_PLAN.md))
+### Phase 4 — Data Ingestion Layer (design-approved 2026-06-24; **implemented 2026-06-25**; see [PHASE_4_PLAN.md](PHASE_4_PLAN.md))
 | # | Decision | Value |
 |---|---|---|
 | P4-D1 | Pipeline seam | **Stop at chunking** — Phase 4 produces `DocumentChunk` rows; embeddings/Qdrant writes are Phase 5 |
 | P4-D2 | Live sources this phase | **Fixtures + opt-in live adapters** — full pipeline on offline fixtures; real crawler/NSE/BSE/Drive gated behind `BA_INGEST_LIVE` (default off) + optional-dep extras |
 | P4-D3 | Scheduling | **Run-once commands + worker + config cadences** — cron in the Railway worker only, never the web process |
+| P4-D4 | Registry write-service split | `app/ingestion/registry_service.py` (dedup/version/register/audit, **full SHA-256** checksum) owns Document/Version/Audit rows; the orchestrator owns chunk writes. Read-side lookups stay in `services/document_registry_service.py`. |
+| P4-D5 | No-vector guard | The orchestrator imports **no** vector store / embedding provider; a test (`test_orchestrator.test_orchestrator_writes_no_vectors`) asserts the writable store count stays 0 after a run — the structural enforcement of P4-D1. |
+| P4-D6 | Migration guard | `0001_initial` builds the baseline via `create_all` over *current* metadata, so `0002_phase4_ingestion` is **inspector-guarded** (no-op when `ingestion_runs` already exists) and reversible — safe on both fresh and pre-existing 0001 databases. |
+| P4-D7 | Canonical metadata at ingest | `metadata.extract` guarantees a **canonical `filing_type`** (taxonomy + keyword inference + safe default) and supported language, so Phase 5's strict FK-payload build never rejects an ingested chunk. |
 
 ### Phase 6 — RAG System (implemented 2026-06-25)
 | # | Decision | Value |

@@ -210,3 +210,35 @@ class MockMarketData(MarketDataProvider):
         base = self._seed(symbol)
         return {"symbol": symbol.upper(), "open": base, "high": round(base * 1.02, 2),
                 "low": round(base * 0.98, 2), "close": round(base * 1.005, 2), "source": "mock-market"}
+
+    def get_market_depth(self, symbol: str) -> dict:
+        """Deterministic 5-level order book around the last traded price."""
+        ltp = self._seed(symbol)
+        tick = round(ltp * 0.0005 + 0.05, 2)
+        bids = [{"price": round(ltp - tick * i, 2), "qty": 100 * i} for i in range(1, 6)]
+        asks = [{"price": round(ltp + tick * i, 2), "qty": 100 * i} for i in range(1, 6)]
+        return {"symbol": symbol.upper(), "ltp": ltp, "bids": bids, "asks": asks,
+                "source": "mock-market"}
+
+    def get_option_chain(self, symbol: str) -> dict:
+        """Deterministic option chain: ATM-centred strikes with synthetic call/put quotes."""
+        ltp = self._seed(symbol)
+        step = max(1.0, round(ltp * 0.01, 0))
+        atm = round(ltp / step) * step
+        strikes = []
+        for i in range(-2, 3):
+            strike = round(atm + i * step, 2)
+            strikes.append({
+                "strike": strike,
+                "call_ltp": round(max(0.05, ltp - strike) + step, 2),
+                "put_ltp": round(max(0.05, strike - ltp) + step, 2),
+            })
+        return {"symbol": symbol.upper(), "underlying": ltp, "strikes": strikes,
+                "source": "mock-market"}
+
+    def subscribe_ticks(self, symbol: str, count: int = 1) -> list[dict]:
+        """Deterministic snapshot stream stand-in for a real WebSocket subscription."""
+        base = self._seed(symbol)
+        return [{"symbol": symbol.upper(), "seq": i,
+                 "ltp": round(base + (i % 5) * 0.05, 2), "source": "mock-market"}
+                for i in range(max(1, count))]

@@ -8,3 +8,24 @@ os.environ.setdefault("BA_DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/ba_
 os.environ.setdefault("BA_RATE_LIMIT_PER_IP_PER_MIN", "100000")
 os.environ.setdefault("BA_ADMIN_SEED_PASSWORD", "admin12345")
 os.environ.setdefault("BA_QDRANT_URL", "")  # skip Qdrant network in tests
+
+import pytest
+
+
+@pytest.fixture
+def mem_db():
+    """An isolated in-memory SQLite session, so Phase 4 ingestion tests never pollute the shared test
+    DB that the Phase 5/6 suites read from."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from app.db.base import Base
+    from app.db import models  # noqa: F401 - populate metadata
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    db = sessionmaker(bind=engine)()
+    try:
+        yield db
+    finally:
+        db.close()
+        engine.dispose()

@@ -31,8 +31,23 @@ services:
     depends_on: [postgres, redis, qdrant]
     command: uvicorn app.main:app --host 0.0.0.0 --port 8200
 
-  # Phase 5 embedding worker (one-shot). Runs OFF the web process. Profile-gated so it doesn't
-  # auto-start: `docker compose run --rm worker` or `docker compose --profile worker up worker`.
+  # Phase 4 ingestion worker (one-shot). Runs OFF the web process. Sources -> registry -> chunks,
+  # stops before embeddings. Fixtures-first by default (BA_INGEST_LIVE unset). Profile-gated:
+  # `docker compose run --rm ingest` or `docker compose --profile worker up ingest`.
+  ingest:
+    build: ./apps/backend
+    profiles: ["worker"]
+    environment:
+      BA_USE_MOCKS: "true"
+      BA_INGEST_LIVE: "false"
+      BA_DATABASE_URL: "postgresql+psycopg2://brokerassist:brokerassist@postgres:5432/brokerassist"
+      BA_REDIS_URL: "redis://redis:6379/0"
+    depends_on: [postgres, redis]
+    command: python -m app.worker.runner --all --once
+
+  # Phase 5 embedding worker (one-shot). Runs OFF the web process. Consumes the chunks the ingest
+  # worker produced. Profile-gated so it doesn't auto-start:
+  # `docker compose run --rm worker` or `docker compose --profile worker up worker`.
   worker:
     build: ./apps/backend
     profiles: ["worker"]
