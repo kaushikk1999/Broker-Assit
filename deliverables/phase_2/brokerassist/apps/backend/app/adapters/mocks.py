@@ -5,9 +5,10 @@ import hashlib
 import math
 import re
 
+from app.config import settings
 from app.adapters.base import (
-    LanguageProvider, EmbeddingProvider, VectorStore, ReRanker, LLM,
-    MarketDataProvider, RetrievedChunk,
+    LanguageProvider, EmbeddingProvider, VectorStore, WritableVectorStore, ReRanker, LLM,
+    MarketDataProvider, RetrievedChunk, VectorPoint, CollectionContractError,
 )
 
 _DEVANAGARI = re.compile(r"[ऀ-ॿ]")
@@ -64,9 +65,58 @@ class MockLanguage(LanguageProvider):
 
 
 class MockEmbedding(EmbeddingProvider):
+    """Deterministic stand-in for embeddinggemma. Dimension is configurable so Phase 5 can exercise
+    dynamic dimension detection without a live model (default 16)."""
+    def __init__(self, dim: int = 16):
+        self._dim = dim
+
     def embed(self, text: str) -> list[float]:
-        h = hashlib.sha256(text.encode()).digest()
-        return [b / 255.0 for b in h[:16]]  # deterministic stand-in vector
+        # Deterministic vector of length self._dim by hashing (text + block index).
+        out: list[float] = []
+        block = 0
+        while len(out) < self._dim:
+            h = hashlib.sha256(f"{text}#{block}".encode()).digest()
+            out.extend(b / 255.0 for b in h)
+            block += 1
+        return out[: self._dim]
+
+
+class MockWritableVectorStore(WritableVectorStore):
+    """In-memory dual-vector store standing in for Qdrant brokerage_kb (Phase 5). Persists points so a
+    test can upsert then read back. Enforces the dense-dimension contract and fails fast on mismatch."""
+    def __init__(self):
+        self._points: dict[int, VectorPoint] = {}
+        self._dense_dim: int | None = None
+
+    def ensure_collection(self, dense_dim: int) -> dict:
+        name = settings.qdrant_collection_name
+        if self._dense_dim is None:
+            self._dense_dim = dense_dim
+            return {"status": "created", "collection": name, "dense_dim": dense_dim,
+                    "vectors": [settings.qdrant_dense_vector_name, settings.qdrant_sparse_vector_name]}
+        if self._dense_dim != dense_dim:
+            raise CollectionContractError(
+                f"dense dim mismatch for {name}: collection={self._dense_dim} model={dense_dim}")
+        return {"status": "ok", "collection": name, "dense_dim": dense_dim}
+
+    def upsert(self, points: list[VectorPoint]) -> int:
+        for p in points:
+            if self._dense_dim is not None and len(p.dense) != self._dense_dim:
+                raise CollectionContractError(
+                    f"point {p.point_id} dense len {len(p.dense)} != collection dim {self._dense_dim}")
+            self._points[p.point_id] = p  # idempotent: keyed by point_id (= chunk_id)
+        return len(points)
+
+    def delete(self, point_ids: list[int]) -> int:
+        removed = 0
+        for pid in point_ids:
+            if pid in self._points:
+                del self._points[pid]
+                removed += 1
+        return removed
+
+    def count(self) -> int:
+        return len(self._points)
 
 
 class MockVectorStore(VectorStore):

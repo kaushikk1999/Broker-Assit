@@ -43,7 +43,7 @@
 | **2 — System Architecture (+ thin slice)** | Mocks-first NALCO knowledge-RAG thin-slice + widget security | ✅ | `deliverables/phase_2/brokerassist/` |
 | **3 — Backend Foundation** | Auth/access control, persistence, abuse control, module APIs, Document Registry, real-infra wiring | ✅ | code + 20 tests |
 | **4 — Data Ingestion Layer** | 6 sources → crawl/parse → metadata → dedup → registry → chunk (stops before embeddings) | 🟡 ⛔ | **planned & design-approved, not implemented** → [PHASE_4_PLAN.md](PHASE_4_PLAN.md) |
-| **5 — Embedding Pipeline** | chunks → embeddinggemma dense + native sparse → Qdrant `brokerage_kb` | ⛔ | **to structure next** → [PHASE_5_KICKOFF.md](PHASE_5_KICKOFF.md) |
+| **5 — Embedding Pipeline** | chunks → embeddinggemma dense + native sparse → Qdrant `brokerage_kb` (dual-vector, FK-only payload) | ✅ (mocks-first) / ⚠️ live | **Implemented mocks-first** — `services/embedding_pipeline.py`, `adapters/ollama_cloud.py`, `adapters/qdrant_real.py` (dual-vector + dynamic dim), `worker/embed_runner.py`; 31 Phase-5 tests green (51 total). Live path gated on rotated Ollama/Qdrant creds (+ Phase-4 corpus) |
 | **6 — RAG System** | hybrid retrieval (dense+sparse) → RRF → rerank → generate → cite | 🟡 | mock pipeline exists (`rag_pipeline.py`); real path later |
 | **7 — Multilingual Layer** | real Sarvam EN/HI/TA detect/translate | 🟡 | mock exists; real = Sarvam adapter |
 | **8+ — NALCO pilot / nav agent / frontend / launch** | per roadmap | ⛔ ⚠️ | gated on discovery TBDs |

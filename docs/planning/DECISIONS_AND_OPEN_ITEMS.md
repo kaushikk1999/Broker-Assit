@@ -57,9 +57,16 @@ Phase 7 = Multilingual.** "Real vendor adapters" is a cross-cutting wiring works
 | ADR-008 | Market-data vendor + licensing (roadmap: TrueData primary) | Workstream C-6 |
 | ADR-009 | Source-authority precedence on conflict (NSE/BSE/IR/site) | Workstream D-3 |
 | ADR-010 | Secrets management on Railway | Workstream D-4 |
-| ADR-011 | Qdrant collection name — roadmap `brokerage_kb` vs code `brokerassist_knowledge` (recommend rename to match roadmap) | Phase 5 |
-| ADR-012 | Qdrant payload contract expansion — add retrieval-filter fields `{language, company, filing_type, date}` to the FK-only payload (roadmap p. 19) | Phase 5 |
-| ADR-013 | Dynamic embedding-dimension detection — deprecate hardcoded `BA_QDRANT_DENSE_DIM` in favor of probe-detected dim; keep an optional assertion override | Phase 5 |
+| ~~ADR-011~~ | **Resolved (Phase 5):** adopted canonical `brokerage_kb` (env `BA_QDRANT_COLLECTION_NAME`) with `BA_QDRANT_COLLECTION` kept as a backward-compat alias. | closed |
+| ~~ADR-012~~ | **Resolved (Phase 5):** `PAYLOAD_CONTRACT` expanded to `{document_id, chunk_id, language, company, filing_type, date}`; citation fields stay PostgreSQL-only. | closed |
+| ~~ADR-013~~ | **Resolved (Phase 5):** dynamic probe-based dimension detection (`EmbeddingProvider.probe_dimension()`); `BA_QDRANT_DENSE_DIM` superseded by optional `BA_EMBEDDING_DIMENSION_OVERRIDE` (alias retained). | closed |
+
+### Phase 5 — Embedding Pipeline (implemented mocks-first 2026-06-25)
+| # | Decision | Value |
+|---|---|---|
+| P5-D1 | Phase-4 gap | **Build Phase 5 mocks-first now** against the existing `DocumentChunk` contract; data-agnostic, backfills when Phase 4 lands |
+| P5-D2 | Naming | **Adopt roadmap canon (`brokerage_kb`, `dense`/`sparse`, `BA_OLLAMA_CLOUD_*`) + keep backward-compat aliases** |
+| P5-D3 | Startup policy | **Conditional fail-fast, create=false default** — fail fast only when a real Qdrant/Ollama is configured and mismatched; mocks mode always boots; collection auto-create opt-in |
 
 ---
 

@@ -1,0 +1,12 @@
+Page,CTA Text,Placement,Audience,Purpose,Language Variants,Status
+Home,Book a demo,Header + hero + CTA band,Brokerage buyer,Primary conversion,"Book a demo / डेमो बुक करें / டெமோ பதிவு செய்",Final
+Home,Try the assistant,Hero secondary + demo panel,Buyer + investor,Open live demo widget,"Try the assistant / असिस्टेंट आज़माएं / உதவியாளரை முயற்சிக்கவும்",Final
+Stock Research,Book a demo,Header + page end,Buyer,Convert after demo,EN/HI/TA,Final
+Stock Research,Ask a sample question,Demo panel,Investor,Engage with demo,EN/HI/TA,Final
+NALCO Intelligence,Explain a filing,Demo panel,Investor,Showcase filing intelligence,EN/HI/TA,Final
+NALCO Intelligence,Book a demo,Page end,Buyer,Convert,EN/HI/TA,Final
+Algo Education,Try the assistant,Demo panel,Investor,Engage with algo demo,EN/HI/TA,Final
+Algo Education,Book a demo,Page end,Buyer,Convert,EN/HI/TA,Final
+Contact,Submit / Request access,Form,Buyer,Capture lead + API-key request,"Request access / एक्सेस का अनुरोध करें / அணுகலைக் கோரு",Final
+Global,Talk to a human,Inside widget,Investor,Escalation/handoff,"Talk to a human / किसी व्यक्ति से बात करें / ஒரு நபரிடம் பேசு",Final
+Global,EN / हिं / தமிழ்,Header + footer + widget,All,Language switch,Native labels,Final

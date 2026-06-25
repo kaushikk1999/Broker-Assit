@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact — BrokerAssist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+Tamil:wght@400;600&family=Noto+Sans+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="contact">
+<main id="main">
+  <section class="hero wrap">
+    <span class="eyebrow" data-i18n="contact_eyebrow"></span>
+    <h1 data-i18n="contact_h1"></h1>
+    <p class="lead" data-i18n="contact_lead"></p>
+  </section>
+
+  <section class="wrap">
+    <div class="grid cols-2" style="align-items:start">
+      <form id="contact-form" novalidate>
+        <div class="field">
+          <label for="cf-name" data-i18n="f_name"></label>
+          <input id="cf-name" name="name" type="text" required>
+        </div>
+        <div class="field">
+          <label for="cf-email" data-i18n="f_email"></label>
+          <input id="cf-email" name="email" type="email" required>
+        </div>
+        <div class="field">
+          <label for="cf-broker" data-i18n="f_broker"></label>
+          <input id="cf-broker" name="brokerage" type="text" required>
+        </div>
+        <div class="field">
+          <label for="cf-size" data-i18n="f_size"></label>
+          <select id="cf-size" name="size">
+            <option data-i18n="f_size_s"></option>
+            <option data-i18n="f_size_m"></option>
+            <option data-i18n="f_size_l"></option>
+          </select>
+        </div>
+        <div class="field">
+          <span data-i18n="f_langs" style="font-size:.85rem;font-weight:600"></span>
+          <div class="checks">
+            <label><input type="checkbox" name="lang" value="en" checked> <span data-i18n="f_lang_en"></span></label>
+            <label><input type="checkbox" name="lang" value="hi"> <span data-i18n="f_lang_hi"></span></label>
+            <label><input type="checkbox" name="lang" value="ta"> <span data-i18n="f_lang_ta"></span></label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="cf-use" data-i18n="f_usecase"></label>
+          <textarea id="cf-use" name="usecase" rows="3"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit" data-i18n="f_submit"></button>
+        <p id="contact-success" class="note" role="status" tabindex="-1" hidden style="margin-top:14px"></p>
+      </form>
+
+      <aside>
+        <div class="card">
+          <h3 data-i18n="what_title"></h3>
+          <div class="grid" style="gap:10px;margin-top:6px">
+            <div><i class="ti ti-key" aria-hidden="true" style="color:var(--accent)"></i> <span data-i18n="what_1"></span></div>
+            <div><i class="ti ti-language" aria-hidden="true" style="color:var(--accent)"></i> <span data-i18n="what_2"></span></div>
+            <div><i class="ti ti-quote" aria-hidden="true" style="color:var(--accent)"></i> <span data-i18n="what_3"></span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+<script src="assets/app.js"></script>
+</body>
+</html>

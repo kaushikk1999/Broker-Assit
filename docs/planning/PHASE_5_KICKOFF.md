@@ -1,5 +1,16 @@
 # Phase 5 — Embedding Pipeline (kickoff brief for structuring)
 
+> ✅ **IMPLEMENTED MOCKS-FIRST (2026-06-25).** This brief has been executed. Code:
+> `app/services/embedding_pipeline.py` (orchestration + sparse encoder + startup check),
+> `app/services/metadata_contract.py` (canonical enums + FK-only payload),
+> `app/adapters/ollama_cloud.py` (real embeddinggemma, credential-gated),
+> `app/adapters/qdrant_real.py` (dual-vector `brokerage_kb` lifecycle + upsert, dynamic dim),
+> `app/services/document_registry_service.py`, `app/worker/embed_runner.py`. Tests:
+> `tests/test_phase5_*.py` (31 tests; 51 total green). Run: `python -m app.worker.embed_runner --seed --once`.
+> Decisions locked: P5-D1/D2/D3 + ADR-011/012/013 closed in [DECISIONS_AND_OPEN_ITEMS.md](DECISIONS_AND_OPEN_ITEMS.md).
+> Live path still gated on rotated Ollama/Qdrant credentials (and a real Phase-4 corpus).
+
+
 > **Purpose of this file:** give the next agent everything needed to **structure Phase 5** the same way
 > Phase 4 was structured — roadmap requirements extracted, current-code reuse/gaps mapped, the
 > handoff contract from Phase 4 stated, invariants restated, and the open questions surfaced.

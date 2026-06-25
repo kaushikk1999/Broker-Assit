@@ -35,6 +35,11 @@ def ready(db: DBSession = Depends(get_db)):
         "postgres": {"ok": db_ok},
         "redis": {"backend": cache.name, "ok": cache.ping()},
         "qdrant": qdrant_status(),
+        "embedding": {
+            "provider": "mock" if (settings.use_mocks or not settings.ollama_configured) else "ollama_cloud",
+            "model": settings.embedding_model,
+            "collection": settings.qdrant_collection_name,
+        },
     }
     ready_ok = db_ok and deps["redis"]["ok"]
     return {

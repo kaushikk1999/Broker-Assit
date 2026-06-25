@@ -1,0 +1,11 @@
+type,name,website,research_status,notes
+Brokerage,Zerodha,https://zerodha.com,Not Started,"Check the website, support/help section, ticket option, and mobile experience."
+Brokerage,Angel One,https://www.angelone.in,Not Started,"Check support/help, app assistant if available, account opening help, and stock research support."
+Brokerage,Groww,https://groww.in,Not Started,"Check help center, app-first support, investment categories, and mobile experience."
+Brokerage,Upstox,https://upstox.com,Not Started,"Check AI chatbot, help center, ticket option, and mobile support."
+Brokerage,ICICI Direct,https://www.icicidirect.com,Not Started,"Check WhatsApp chatbot, customer care, and investment query support."
+AI Platform,Botpress,https://botpress.com,Not Started,"Check website chatbot/widget, AI agent builder, language support, and integrations."
+AI Platform,ManyChat,https://manychat.com,Not Started,"Check WhatsApp/social media automation, lead capture, human handoff, and limitations."
+AI Platform,Intercom / Fin,https://www.intercom.com,Not Started,"Check Fin AI Agent, language support, human handoff, and pricing."
+AI Platform,Drift,https://www.salesloft.com/platform/drift,Not Started,"Check website visitor conversion, lead qualification, and meeting booking."
+AI Platform,Freshchat / Freddy AI,https://www.freshworks.com,Not Started,"Check Freddy AI, language support, and support automation."

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.db.seed import seed
 from app.core.observability import configure_logging, CorrelationIdMiddleware, log
-from app.adapters.qdrant_real import validate_collection
+from app.services.embedding_pipeline import embedding_startup_check
 from app.api import routes_chat, routes_meta, routes_admin, routes_modules
 
 
@@ -16,8 +16,9 @@ async def lifespan(_: FastAPI):
     configure_logging()
     seed()  # create tables + seed demo tenant/api-key/allowlist, admin user, NALCO KB (idempotent)
     if settings.qdrant_validate_on_startup:
-        status = validate_collection()
-        log.info("qdrant startup validation: %s", status)
+        # Phase 5 readiness: conditional fail-fast — raises to STOP startup only when a real, configured
+        # Qdrant/Ollama violates the contract; mocks mode always boots credential-free.
+        log.info("phase5 embedding startup check: %s", embedding_startup_check())
     yield
 
 
