@@ -52,7 +52,7 @@ def chat(body: ChatRequest, request: Request, ctx: dict = Depends(require_sessio
                             citations=[], disclaimer=DISCLAIMER,
                             debug={"cache_hit": result["cache_hit"], "data": result["data"]})
 
-    result = handle_knowledge(body.message, lang, db)
+    result = handle_knowledge(body.message, lang, db, filters=route.get("filters"))
     persist_turn(db, tenant_id, session_id, body.message, result["answer"], lang, route["intent"],
                  "knowledge")
     log_event(db, "chat", tenant_id, session_id, {"branch": "knowledge",

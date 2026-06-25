@@ -90,6 +90,52 @@ def normalize_date(value) -> str:
 # Exactly the keys Qdrant is allowed to store (mirrors qdrant_real.PAYLOAD_CONTRACT).
 PAYLOAD_KEYS = ("document_id", "chunk_id", "language", "company", "filing_type", "date")
 
+# The subset of payload fields usable as retrieval filters (document_id/chunk_id are FKs, not filters).
+FILTER_KEYS = ("language", "company", "filing_type", "date")
+
+
+def normalize_filters(filters: dict | None) -> dict:
+    """Canonicalize a retrieval-filter dict to the Qdrant payload contract so the mock store and the
+    real Qdrant adapter filter identically (at retrieval, on both dense and sparse branches).
+
+    - Only `FILTER_KEYS` are honored; unknown keys (e.g. `source`, which lives only in PostgreSQL) are
+      dropped — they are NOT in the Qdrant payload and cannot be filtered at retrieval.
+    - Values may be scalar or list; each is canonicalized (company spelling, filing-type taxonomy,
+      ISO date). A list means "match any of".
+    - A `language` filter is dropped unless `settings.retrieval_language_filter` is enabled (default
+      off: the query is translated to English and embeddinggemma is multilingual, so language filtering
+      would wrongly exclude English documents).
+    Returns {} when there is nothing to filter on."""
+    if not filters:
+        return {}
+
+    def _norm(key: str, val):
+        if key == "company":
+            return normalize_company(val)
+        if key == "filing_type":
+            return normalize_filing_type(val, strict=False)
+        if key == "language":
+            return normalize_language(val)
+        if key == "date":
+            return normalize_date(val)
+        return None
+
+    out: dict = {}
+    for key, val in filters.items():
+        if key not in FILTER_KEYS:
+            continue
+        if key == "language" and not settings.retrieval_language_filter:
+            continue
+        if isinstance(val, (list, tuple, set)):
+            vals = [v for v in (_norm(key, x) for x in val) if v]
+            if vals:
+                out[key] = vals
+        else:
+            nv = _norm(key, val)
+            if nv:
+                out[key] = nv
+    return out
+
 
 def build_payload(*, document_id: int, chunk_id: int, language: str | None, company: str | None,
                   filing_type: str | None, filing_date, strict: bool = True) -> dict:

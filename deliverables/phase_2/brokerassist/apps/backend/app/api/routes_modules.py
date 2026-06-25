@@ -42,9 +42,10 @@ def search(body: SearchRequest, request: Request, ctx: dict = Depends(require_se
 def filings(body: FilingsRequest, request: Request, ctx: dict = Depends(require_session)):
     session_id, tenant_id, _ = _guard(request, ctx)
     db = ctx["db"]; lang = _lang(body.query, body.language)
-    filters = {"source": ["NSE", "BSE", "NALCO_IR"]}
-    if body.company:
-        filters["company"] = body.company
+    # `source` is NOT a Qdrant payload field (payload = FKs + company/filing_type/language/date), so it
+    # cannot be a retrieval filter; it lives only in PostgreSQL. Filter by company (a payload field) when
+    # provided; non-payload keys are dropped by the metadata contract's normalize_filters.
+    filters = {"company": body.company} if body.company else None
     res = handle_knowledge(body.query, lang, db, filters=filters)
     log_event(db, "filings", tenant_id, session_id, {"company": body.company})
     persist_turn(db, tenant_id, session_id, body.query, res["answer"], lang, "filing", "knowledge")

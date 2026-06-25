@@ -1,0 +1,49 @@
+# Local full-stack: real Postgres, Redis, Qdrant alongside the backend. Backend stays mocks-first for
+# the AI providers (Ollama/Sarvam/re-ranker/market) until credentials arrive.
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: brokerassist
+      POSTGRES_PASSWORD: brokerassist
+      POSTGRES_DB: brokerassist
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes: ["qdrantdata:/qdrant/storage"]
+
+  backend:
+    build: ./apps/backend
+    environment:
+      BA_USE_MOCKS: "true"
+      BA_DATABASE_URL: "postgresql+psycopg2://brokerassist:brokerassist@postgres:5432/brokerassist"
+      BA_REDIS_URL: "redis://redis:6379/0"
+      BA_QDRANT_URL: "http://qdrant:6333"
+    ports: ["8200:8200"]
+    depends_on: [postgres, redis, qdrant]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8200
+
+  # Phase 5 embedding worker (one-shot). Runs OFF the web process. Profile-gated so it doesn't
+  # auto-start: `docker compose run --rm worker` or `docker compose --profile worker up worker`.
+  worker:
+    build: ./apps/backend
+    profiles: ["worker"]
+    environment:
+      BA_USE_MOCKS: "true"
+      BA_DATABASE_URL: "postgresql+psycopg2://brokerassist:brokerassist@postgres:5432/brokerassist"
+      BA_REDIS_URL: "redis://redis:6379/0"
+      BA_QDRANT_URL: "http://qdrant:6333"
+    depends_on: [postgres, redis, qdrant]
+    command: python -m app.worker.embed_runner --once
+
+volumes:
+  pgdata:
+  qdrantdata:

@@ -37,6 +37,20 @@ log, and the information inventory under `deliverables/phase_2/discovery/`.
 | P4-D2 | Live sources this phase | **Fixtures + opt-in live adapters** — full pipeline on offline fixtures; real crawler/NSE/BSE/Drive gated behind `BA_INGEST_LIVE` (default off) + optional-dep extras |
 | P4-D3 | Scheduling | **Run-once commands + worker + config cadences** — cron in the Railway worker only, never the web process |
 
+### Phase 6 — RAG System (implemented 2026-06-25)
+| # | Decision | Value |
+|---|---|---|
+| P6-D1 | Hybrid fusion location | **Server-side RRF in Qdrant** via the Query API (`query_points` with dense + sparse prefetches, each carrying the metadata filter, fused with `Fusion.RRF`). Mock store mirrors this in Python. |
+| P6-D2 | Citation invariant on real read | Qdrant read returns **FKs + score only**; chunk text + citations are **hydrated from PostgreSQL** (`rag_pipeline._hydrate_text`). Honors ADR-002 on the live path. |
+| P6-D3 | Sparse query/index parity | Query sparse vector reuses **the same `embedding_pipeline.sparse_encode`** used at ingestion. |
+| P6-D4 | Metadata filters | Applied **at retrieval on both branches**, canonicalized by a shared `metadata_contract.normalize_filters`. Only payload fields filter (`company`, `filing_type`, `language`, `date`); `source` is PostgreSQL-only and is dropped. |
+| P6-D5 | Language retrieval filter | **OFF by default** (`BA_RETRIEVAL_LANGUAGE_FILTER=false`): the query is translated to English and embeddinggemma is multilingual, so a language filter would wrongly exclude EN docs. |
+| P6-D6 | Auto filter derivation | Intent router derives a **company filter only** (high-precision, pilot = NALCO). `filing_type` is **not** auto-derived (small corpus + taxonomy overlap → over-filtering risk); explicit module filters still honored. |
+| P6-D7 | Query expansion | Deterministic, dependency-free acronym/synonym expansion for **retrieval recall only**; reranking + generation use the original question. Toggle `BA_QUERY_EXPANSION_ENABLED`. |
+| P6-D8 | Reranker resilience | Hosted cross-encoder; on outage it **degrades to the incoming RRF order** (`BA_RERANK_FALLBACK_ENABLED=true`). Reranker is precision, not a correctness gate. |
+| P6-D9 | Sarvam pulled into Phase 6 | The real **Sarvam detect/translate** adapter was built now (owner decision) behind `get_language()`; the rest of Phase 7 (transliteration / STT / TTS / UI) is unchanged. |
+| P6-D10 | Hosted-model constraint preserved | Reranker + Gemma generation + Sarvam are all **remote calls behind ABCs**; no model weights run in the FastAPI/Railway process. |
+
 ### Phase-numbering correction (2026-06-24)
 Roadmap numbering is authoritative: **Phase 4 = Data Ingestion · Phase 5 = Embedding · Phase 6 = RAG ·
 Phase 7 = Multilingual.** "Real vendor adapters" is a cross-cutting wiring workstream
@@ -53,7 +67,7 @@ Phase 7 = Multilingual.** "Real vendor adapters" is a cross-cutting wiring works
 | ADR | Question | Blocks |
 |---|---|---|
 | ADR-006 | Qdrant hosting — Qdrant Cloud vs Railway-hosted | Workstream C-3 |
-| ADR-007 | Re-ranker provider / endpoint | Workstream C-4 |
+| ADR-007 | Re-ranker provider / endpoint — **partially addressed (Phase 6):** a generic hosted cross-encoder adapter (`adapters/reranker_cloud.py`) with a configurable request/response contract + RRF fallback is implemented; the specific production vendor/endpoint is still open. | Workstream C-4 |
 | ADR-008 | Market-data vendor + licensing (roadmap: TrueData primary) | Workstream C-6 |
 | ADR-009 | Source-authority precedence on conflict (NSE/BSE/IR/site) | Workstream D-3 |
 | ADR-010 | Secrets management on Railway | Workstream D-4 |

@@ -7,9 +7,11 @@ from app.adapters.mocks import (
 
 
 def get_language():
-    if settings.use_mocks:
+    """Phase 6: real Sarvam detect/translate when configured (BA_SARVAM_API_KEY); mock otherwise."""
+    if settings.use_mocks or not settings.sarvam_configured:
         return MockLanguage()
-    raise NotImplementedError("Real Sarvam adapter not yet wired (provide BA_SARVAM_API_KEY).")
+    from app.adapters.sarvam_cloud import SarvamLanguage
+    return SarvamLanguage()
 
 
 def get_embedding():
@@ -21,15 +23,19 @@ def get_embedding():
 
 
 def get_reranker():
-    if settings.use_mocks:
+    """Phase 6: hosted cross-encoder when configured (BA_RERANKER_URL); mock otherwise (credential-free)."""
+    if settings.use_mocks or not settings.reranker_configured:
         return MockReRanker()
-    raise NotImplementedError("Real hosted re-ranker adapter not yet wired (provide BA_RERANKER_URL).")
+    from app.adapters.reranker_cloud import HostedReRanker
+    return HostedReRanker()
 
 
 def get_llm():
-    if settings.use_mocks:
+    """Phase 6: real Gemma generation (Ollama Cloud) when configured; mock otherwise (credential-free)."""
+    if settings.use_mocks or not settings.generation_configured:
         return MockLLM()
-    raise NotImplementedError("Real Ollama Cloud Gemma adapter not yet wired.")
+    from app.adapters.ollama_cloud import OllamaCloudLLM
+    return OllamaCloudLLM()
 
 
 def get_marketdata():
@@ -39,10 +45,12 @@ def get_marketdata():
 
 
 def get_vector_store(chunks):
-    """Phase 6 READ side. Mock store is built from registry chunks; real impl queries Qdrant by FK."""
-    if settings.use_mocks:
+    """Phase 6 READ side. Mock store is built from registry chunks; the real impl queries Qdrant by FK
+    (hybrid dense+sparse → server-side RRF, filters at retrieval) and ignores `chunks`."""
+    if settings.use_mocks or not settings.qdrant_configured:
         return MockVectorStore(chunks)
-    raise NotImplementedError("Real Qdrant read adapter not yet wired (Phase 6).")
+    from app.adapters.qdrant_real import QdrantReadStore
+    return QdrantReadStore()
 
 
 # --- Phase 5 WRITE side (embedding pipeline) --------------------------------------------------------

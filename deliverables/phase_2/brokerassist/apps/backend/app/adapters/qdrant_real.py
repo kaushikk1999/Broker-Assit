@@ -12,7 +12,9 @@ Design:
 from __future__ import annotations
 
 from app.config import settings
-from app.adapters.base import WritableVectorStore, VectorPoint, CollectionContractError
+from app.adapters.base import (
+    WritableVectorStore, VectorStore, VectorPoint, RetrievedChunk, CollectionContractError,
+)
 
 # The ONLY payload fields Qdrant may store: foreign keys (document_id, chunk_id) + retrieval filters.
 PAYLOAD_CONTRACT = {"document_id", "chunk_id", "language", "company", "filing_type", "date"}
@@ -74,6 +76,69 @@ def qdrant_status() -> dict:
         return {"configured": True, "reachable": True}
     except Exception as e:
         return {"configured": True, "reachable": False, "error": type(e).__name__}
+
+
+def build_qdrant_filter(filters: dict | None):
+    """Translate a normalized retrieval-filter dict into a Qdrant `Filter` (must-match conditions).
+
+    Returns None when there is nothing to filter on. List values become MatchAny (match any of);
+    scalars become MatchValue. The dict is first canonicalized by the metadata contract so the mock and
+    Qdrant filter identically; only payload filter fields survive (document_id/chunk_id are FKs)."""
+    from app.services.metadata_contract import normalize_filters
+    from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny
+
+    nfilters = normalize_filters(filters)
+    if not nfilters:
+        return None
+    must = []
+    for key, want in nfilters.items():
+        if isinstance(want, list):
+            must.append(FieldCondition(key=key, match=MatchAny(any=want)))
+        else:
+            must.append(FieldCondition(key=key, match=MatchValue(value=want)))
+    return Filter(must=must)
+
+
+class QdrantReadStore(VectorStore):
+    """Phase 6 READ side — hybrid dense + native sparse retrieval over `brokerage_kb`, fused with
+    server-side Reciprocal Rank Fusion, with metadata filters applied AT retrieval on BOTH branches.
+
+    The Qdrant payload holds ONLY foreign keys + filters, so candidates come back with FKs + score and
+    NO text; chunk text and citations are hydrated from PostgreSQL downstream (citation invariant)."""
+
+    def __init__(self):
+        if not settings.qdrant_url:
+            raise RuntimeError("Qdrant read store not configured (set BA_QDRANT_URL).")
+        self.name = settings.qdrant_collection_name
+        self.dense = settings.qdrant_dense_vector_name
+        self.sparse = settings.qdrant_sparse_vector_name
+        self._client = _client()
+
+    def hybrid_search(self, query: str, query_vector, top_k, filters=None) -> list[RetrievedChunk]:
+        from qdrant_client.models import Prefetch, FusionQuery, Fusion, SparseVector as QSparse
+        from app.services.embedding_pipeline import sparse_encode
+
+        sv = sparse_encode(query)  # SAME encoder used at ingestion → sparse query/index parity
+        qfilter = build_qdrant_filter(filters)
+        prefetch = [
+            Prefetch(query=list(query_vector), using=self.dense, filter=qfilter, limit=top_k),
+            Prefetch(query=QSparse(indices=sv.indices, values=sv.values), using=self.sparse,
+                     filter=qfilter, limit=top_k),
+        ]
+        resp = self._client.query_points(
+            collection_name=self.name, prefetch=prefetch,
+            query=FusionQuery(fusion=Fusion.RRF), limit=top_k, with_payload=True,
+        )
+        out: list[RetrievedChunk] = []
+        for p in resp.points:
+            payload = p.payload or {}
+            doc_id = payload.get("document_id")
+            chunk_id = payload.get("chunk_id", p.id)
+            if doc_id is None:
+                continue  # malformed point without the FK — skip rather than cite blindly
+            out.append(RetrievedChunk(document_id=int(doc_id), chunk_id=int(chunk_id),
+                                      text="", score=float(p.score)))
+        return out
 
 
 class QdrantWritableStore(WritableVectorStore):

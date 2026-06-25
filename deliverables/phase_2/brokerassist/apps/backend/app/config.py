@@ -45,6 +45,17 @@ class Settings(BaseSettings):
     retrieve_top_k: int = 20
     rerank_top_k: int = 5
 
+    # ---------------------------------------------------------------- Phase 6 — RAG System knobs
+    # Reciprocal Rank Fusion constant (k in 1/(k+rank)); 60 is the de-facto default.
+    rrf_k: int = 60
+    # Deterministic, provider-agnostic query expansion before embedding (improves recall).
+    query_expansion_enabled: bool = True
+    # When the hosted reranker is unreachable, degrade gracefully to the incoming RRF order.
+    rerank_fallback_enabled: bool = True
+    # Apply a language metadata filter at retrieval. OFF by default: the query is translated to English
+    # and embeddinggemma is multilingual, so filtering by user language would wrongly exclude EN docs.
+    retrieval_language_filter: bool = False
+
     supported_languages: tuple[str, ...] = ("en", "hi", "ta")
 
     # ---------------------------------------------------------------- Qdrant (vector store)
@@ -81,6 +92,34 @@ class Settings(BaseSettings):
     embedding_concurrency: int = 2
     embedding_retry_count: int = 3
     embedding_timeout_seconds: int = 30
+
+    # ---------------------------------------------------------------- Phase 6 — generation (Gemma)
+    # Reuses ollama_cloud_url + ollama_cloud_api_key (same hosted Ollama Cloud account as embeddings).
+    # No local weights run in-process. Secrets are injected via env; never defaulted.
+    ollama_gen_model: str = Field(
+        "gemma2", validation_alias=AliasChoices("BA_OLLAMA_GEN_MODEL", "BA_GEN_MODEL"),
+    )
+    gen_timeout_seconds: int = 60
+    gen_retry_count: int = 2
+    gen_max_tokens: int = 700
+    gen_temperature: float = 0.2
+
+    # ---------------------------------------------------------------- Phase 6 — hosted cross-encoder
+    # Hosted re-ranker endpoint (e.g. BAAI/bge-reranker). No reranker weights run in-process.
+    reranker_url: str = ""
+    reranker_api_key: str = ""
+    reranker_model: str = "BAAI/bge-reranker-base"
+    reranker_timeout_seconds: int = 20
+    reranker_retry_count: int = 2
+
+    # ---------------------------------------------------------------- Phase 6/7 — Sarvam language
+    # Real Sarvam detect/translate adapter (pulled into Phase 6). Credential-gated; mock otherwise.
+    sarvam_base_url: str = "https://api.sarvam.ai"
+    sarvam_api_key: str = Field(
+        "", validation_alias=AliasChoices("BA_SARVAM_API_KEY", "BA_SARVAM_SUBSCRIPTION_KEY"),
+    )
+    sarvam_timeout_seconds: int = 20
+    sarvam_retry_count: int = 2
     # Fatal-error policy: when a REAL vendor is configured and validation fails, stop startup. In mocks
     # mode (no Qdrant/Ollama configured) startup always proceeds (credential-free invariant).
     ingestion_fail_fast: bool = True
@@ -110,6 +149,21 @@ class Settings(BaseSettings):
     @property
     def ollama_configured(self) -> bool:
         return bool(self.ollama_cloud_url and self.ollama_cloud_api_key)
+
+    @property
+    def generation_configured(self) -> bool:
+        """Real Gemma generation (Ollama Cloud) is reachable. Shares the embedding credentials."""
+        return bool(self.ollama_cloud_url and self.ollama_cloud_api_key and self.ollama_gen_model)
+
+    @property
+    def reranker_configured(self) -> bool:
+        """Hosted cross-encoder re-ranker endpoint is configured."""
+        return bool(self.reranker_url)
+
+    @property
+    def sarvam_configured(self) -> bool:
+        """Real Sarvam language (detect/translate) adapter is configured."""
+        return bool(self.sarvam_api_key)
 
 
 settings = Settings()

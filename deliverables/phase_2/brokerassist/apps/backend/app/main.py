@@ -19,6 +19,16 @@ async def lifespan(_: FastAPI):
         # Phase 5 readiness: conditional fail-fast — raises to STOP startup only when a real, configured
         # Qdrant/Ollama violates the contract; mocks mode always boots credential-free.
         log.info("phase5 embedding startup check: %s", embedding_startup_check())
+    # Phase 6 readiness: non-fatal summary of which provider each RAG seam resolves to (mock vs real).
+    live = not settings.use_mocks
+    log.info(
+        "phase6 rag providers: retrieval=%s reranker=%s generation=%s language=%s expansion=%s",
+        "qdrant" if (live and settings.qdrant_configured) else "mock",
+        "hosted" if (live and settings.reranker_configured) else "mock",
+        "ollama_cloud" if (live and settings.generation_configured) else "mock",
+        "sarvam" if (live and settings.sarvam_configured) else "mock",
+        settings.query_expansion_enabled,
+    )
     yield
 
 

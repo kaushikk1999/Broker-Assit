@@ -120,14 +120,33 @@ class MockWritableVectorStore(WritableVectorStore):
 
 
 class MockVectorStore(VectorStore):
-    """Dense (semantic proxy = token overlap) + sparse (BM25-lite IDF) → RRF, filtered at retrieval."""
-    def __init__(self, chunks: list[tuple[int, int, str]]):
-        self._chunks = chunks
+    """Dense (semantic proxy = token overlap) + sparse (BM25-lite IDF) → RRF, filtered at retrieval.
+
+    Accepts chunks as (document_id, chunk_id, text) or (document_id, chunk_id, text, payload). When a
+    payload (the canonical FK + filter dict from `metadata_contract.build_payload`) is supplied, metadata
+    filters are applied AT retrieval on both branches — mirroring the real Qdrant adapter — so candidates
+    are filtered BEFORE fusion, never after."""
+    def __init__(self, chunks: list[tuple]):
+        self._chunks = [(c[0], c[1], c[2]) for c in chunks]
+        self._payloads: dict[tuple[int, int], dict] = {
+            (c[0], c[1]): (c[3] if len(c) > 3 else {}) for c in chunks
+        }
         self._df: dict[str, int] = {}
-        for _, _, text in chunks:
+        for _, _, text in self._chunks:
             for tok in set(_tokens(text)):
                 self._df[tok] = self._df.get(tok, 0) + 1
-        self._n = max(1, len(chunks))
+        self._n = max(1, len(self._chunks))
+
+    @staticmethod
+    def _matches(payload: dict, nfilters: dict) -> bool:
+        for key, want in nfilters.items():
+            have = payload.get(key, "")
+            if isinstance(want, list):
+                if have not in want:
+                    return False
+            elif have != want:
+                return False
+        return True
 
     def _dense(self, q: list[str], text: str) -> float:
         t = set(_tokens(text)); qs = set(q)
@@ -143,9 +162,14 @@ class MockVectorStore(VectorStore):
         return score
 
     def hybrid_search(self, query: str, query_vector, top_k, filters=None) -> list[RetrievedChunk]:
+        from app.services.metadata_contract import normalize_filters
         q = _tokens(query)
-        dense = sorted(self._chunks, key=lambda c: self._dense(q, c[2]), reverse=True)
-        sparse = sorted(self._chunks, key=lambda c: self._sparse(q, c[2]), reverse=True)
+        # Apply metadata filters AT retrieval (before fusion), exactly like the real Qdrant adapter.
+        nfilters = normalize_filters(filters)
+        pool = (self._chunks if not nfilters
+                else [c for c in self._chunks if self._matches(self._payloads.get((c[0], c[1]), {}), nfilters)])
+        dense = sorted(pool, key=lambda c: self._dense(q, c[2]), reverse=True)
+        sparse = sorted(pool, key=lambda c: self._sparse(q, c[2]), reverse=True)
         # Reciprocal Rank Fusion over the two filtered candidate lists.
         rrf: dict[tuple[int, int], float] = {}
         k = 60

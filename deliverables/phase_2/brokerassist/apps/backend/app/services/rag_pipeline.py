@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
 from app.adapters import get_language, get_embedding, get_vector_store, get_reranker, get_llm
+from app.services.query_expansion import expand_query
 from app.db import models
 from app.schemas.chat import Citation
 
@@ -41,9 +42,41 @@ def _is_relevant(query_en: str, chunk_texts: list[str]) -> bool:
     return bool(q & body)
 
 
-def _load_chunks(db: DBSession) -> list[tuple[int, int, str]]:
-    rows = db.query(models.DocumentChunk).all()
-    return [(c.document_id, c.id, c.text) for c in rows]
+def _load_chunks(db: DBSession) -> list[tuple[int, int, str, dict]]:
+    """Chunks for the mock store as (document_id, chunk_id, text, payload). The payload is the SAME
+    canonical FK + filter dict the embedding pipeline writes to Qdrant (built via the metadata
+    contract), so the mock filters identically to the real Qdrant adapter."""
+    from app.services.metadata_contract import build_payload
+    rows: list[tuple[int, int, str, dict]] = []
+    for c in db.query(models.DocumentChunk).all():
+        doc = db.get(models.Document, c.document_id)
+        payload = build_payload(
+            document_id=c.document_id, chunk_id=c.id, language=c.lang,
+            company=(doc.company if doc else ""),
+            filing_type=(doc.filing_type if doc else ""),
+            filing_date=(doc.filing_date if doc else None),
+            strict=False,
+        )
+        rows.append((c.document_id, c.id, c.text, payload))
+    return rows
+
+
+def _hydrate_text(db: DBSession, candidates: list) -> list:
+    """Fill chunk text from PostgreSQL for candidates that arrived with only FKs (real Qdrant read).
+
+    Candidates whose chunk no longer exists in the registry are dropped (cannot ground or cite without
+    text). Candidates that already carry text (the mock store) pass through unchanged."""
+    hydrated = []
+    for c in candidates:
+        if c.text:
+            hydrated.append(c)
+            continue
+        chunk = db.get(models.DocumentChunk, c.chunk_id)
+        if chunk is None:
+            continue
+        c.text = chunk.text
+        hydrated.append(c)
+    return hydrated
 
 
 def handle_knowledge(message: str, user_lang: str, db: DBSession, filters: dict | None = None) -> dict:
@@ -54,19 +87,28 @@ def handle_knowledge(message: str, user_lang: str, db: DBSession, filters: dict 
 
     # 1) Normalize/translate the query to English BEFORE retrieval (fixes HI/TA retrieval).
     query_en = language.translate(message, target="en", source=user_lang) if user_lang != "en" else message
+    # 1b) Query expansion (recall only): append canonical synonyms for retrieval. Reranking and
+    # generation use the original question (precision), so expansion never skews answer quality.
+    query_retrieval = expand_query(query_en)
     # 2) Query embedding (Ollama Cloud · embeddinggemma in prod).
-    query_vec = embedding.embed(query_en)
+    query_vec = embedding.embed(query_retrieval)
     # 3) Hybrid retrieval (dense + native sparse) with filters at retrieval → RRF → Top-20.
     store = get_vector_store(_load_chunks(db))
-    candidates = store.hybrid_search(query_en, query_vec, top_k=settings.retrieve_top_k, filters=filters)
-    # 4) Cross-encoder rerank → Top-5.
+    candidates = store.hybrid_search(query_retrieval, query_vec, top_k=settings.retrieve_top_k,
+                                     filters=filters)
+    # 3b) Hydrate chunk text from PostgreSQL for candidates that carry only FKs (real Qdrant read).
+    # Keeps the citation invariant: Qdrant payload is FK-only; text/citations come from PostgreSQL.
+    candidates = _hydrate_text(db, candidates)
+    # 4) Cross-encoder rerank → Top-5 (on the user's actual question, not the expanded query).
     top = reranker.rerank(query_en, candidates, top_k=settings.rerank_top_k)
     # 4b) Relevance gate: if nothing meaningfully overlaps the query (chit-chat / off-topic),
     # return a friendly fallback with NO citations rather than citing unrelated filings.
     if not _is_relevant(query_en, [c.text for c in top]):
         lang = user_lang if user_lang in NO_GROUNDING else "en"
         return {"answer": NO_GROUNDING[lang], "citations": [],
-                "debug": {"query_en": query_en, "grounded": False, "retrieved": len(candidates)}}
+                "debug": {"query_en": query_en, "query_retrieval": query_retrieval,
+                          "grounded": False, "retrieved": len(candidates),
+                          "filters": filters or None}}
     # 5) Context assembly + generation (Gemma).
     context = [c.text for c in top]
     answer_en = llm.generate(query_en, context)
@@ -85,5 +127,6 @@ def handle_knowledge(message: str, user_lang: str, db: DBSession, filters: dict 
     return {
         "answer": answer,
         "citations": citations,
-        "debug": {"query_en": query_en, "retrieved": len(candidates), "reranked": len(top)},
+        "debug": {"query_en": query_en, "query_retrieval": query_retrieval,
+                  "retrieved": len(candidates), "reranked": len(top), "filters": filters or None},
     }
