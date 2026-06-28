@@ -12,7 +12,7 @@ stock brokerages. NALCO knowledge pilot, **mocks-first**.
 
 ## 30-second status
 - Code lives in `deliverables/phase_2/brokerassist/` (FastAPI backend + Next.js frontend).
-- **Phases 0–6 implemented, mocks-first** (141/141 tests, full E2E). Runs **`BA_USE_MOCKS=true`** — zero credentials.
+- **Phases 0–6 implemented, mocks-first** (142/142 tests, full E2E). Runs **`BA_USE_MOCKS=true`** — zero credentials.
 - **Phase numbering (roadmap):** 4 = Data Ingestion · 5 = Embedding · 6 = RAG · 7 = Multilingual. ("Real vendor adapters" is a cross-cutting wiring workstream, not a phase.)
 - **Phase 4 — Data Ingestion Layer:** ✅ implemented fixtures-first (`app/ingestion/` + `app/worker/runner.py`; sources→parse→metadata→dedup→registry→chunk, hard stop before embeddings). Live crawl/NSE/BSE/Drive gated on `BA_INGEST_LIVE` → [PHASE_4_PLAN.md](docs/planning/PHASE_4_PLAN.md).
 - **Phase 7 — Multilingual:** 🟡 partial (Sarvam detect/translate built; transliteration/STT/TTS/UI to do).
@@ -30,8 +30,8 @@ stock brokerages. NALCO knowledge pilot, **mocks-first**.
 ## Run & verify
 ```bash
 cd deliverables/phase_2/brokerassist/apps/backend && source .venv/bin/activate
-pytest -q                                # expect: 141 passed
-python -m app.worker.runner --all --once # Phase 4 ingestion (offline fixtures → registry → chunks)
+pytest -q                                # expect: 142 passed
+python -m app.worker.runner --all --seed --once # Phase 4 ingestion (--seed bootstraps schema+demo data on a fresh DB; offline fixtures → registry → chunks)
 uvicorn app.main:app --port 8200         # /docs, /ready
 ```
 

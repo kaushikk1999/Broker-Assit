@@ -28,11 +28,23 @@ def test_unknown_source_raises():
 
 def test_live_adapter_is_gated_and_refuses_without_wiring(monkeypatch):
     monkeypatch.setattr(settings, "ingest_live", True)
-    src = get_source("nse")
+    # broker_site/gdrive are still thin seams (nse/bse/nalco_ir are now wired). With its endpoint set,
+    # an un-wired live source must refuse (NotImplementedError) rather than silently fetch.
+    monkeypatch.setattr(settings, "gdrive_folder_id", "some-folder-id")
+    src = get_source("gdrive")
     assert src.mode == "live"
-    # The live path is deliberately not wired (mocks-first): it must refuse rather than silently fetch.
     with pytest.raises((NotImplementedError, RuntimeError)):
         src.discover()
+
+
+def test_nse_bse_nalco_live_adapters_are_wired(monkeypatch):
+    """NSE + BSE + NALCO IR now resolve to real, network-backed adapters (not the NotImplementedError
+    stub). We don't hit the network here — just assert the live adapter type is selected when gated on."""
+    monkeypatch.setattr(settings, "ingest_live", True)
+    from app.ingestion.sources.live_sources import NseLive, BseLive, NalcoIrLive
+    assert isinstance(get_source("nse"), NseLive)
+    assert isinstance(get_source("bse"), BseLive)
+    assert isinstance(get_source("nalco_ir"), NalcoIrLive)
 
 
 def test_live_broker_site_unconfigured_raises(monkeypatch):

@@ -17,20 +17,24 @@ _RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
 class OllamaCloudEmbedding(EmbeddingProvider):
     def __init__(self, base_url: str | None = None, api_key: str | None = None,
                  model: str | None = None, timeout: int | None = None, retries: int | None = None):
-        self.base_url = (base_url or settings.ollama_cloud_url).rstrip("/")
+        # Embeddings may target a different Ollama server than generation (e.g. a local sidecar running
+        # qwen3-embedding) — BA_OLLAMA_EMBED_URL overrides, else fall back to the shared cloud URL.
+        self.base_url = (base_url or settings.ollama_embed_url or settings.ollama_cloud_url).rstrip("/")
         self.api_key = api_key or settings.ollama_cloud_api_key
         self.model = model or settings.embedding_model
         self.timeout = timeout or settings.embedding_timeout_seconds
         self.retries = settings.embedding_retry_count if retries is None else retries
-        if not self.base_url or not self.api_key:
+        if not self.base_url:
             raise RuntimeError(
-                "Ollama Cloud not configured (set BA_OLLAMA_CLOUD_URL and BA_OLLAMA_CLOUD_API_KEY).")
+                "Ollama embedding endpoint not configured (set BA_OLLAMA_EMBED_URL or BA_OLLAMA_CLOUD_URL).")
 
     def _post(self, inputs):
         import httpx  # lazy import keeps the module importable without the dep present at rest
 
         url = f"{self.base_url}/api/embed"
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:  # a local Ollama sidecar needs no key; cloud does
+            headers["Authorization"] = f"Bearer {self.api_key}"
         body = {"model": self.model, "input": inputs}
         last_err: Exception | None = None
         for attempt in range(self.retries + 1):

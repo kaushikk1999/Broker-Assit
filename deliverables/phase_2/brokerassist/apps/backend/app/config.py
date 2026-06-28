@@ -89,6 +89,11 @@ class Settings(BaseSettings):
     ollama_cloud_api_key: str = Field(
         "", validation_alias=AliasChoices("BA_OLLAMA_CLOUD_API_KEY", "BA_OLLAMA_API_KEY"),
     )
+    # Optional separate base URL for the EMBEDDING endpoint. Ollama Cloud's /api/embed is not enabled on
+    # every plan, so embeddings can point at a different Ollama server (e.g. a local/sidecar
+    # http://localhost:11434 running qwen3-embedding) while generation stays on Ollama Cloud. Still a
+    # remote call behind the adapter (no weights in-process). Empty => reuse ollama_cloud_url.
+    ollama_embed_url: str = ""
     embedding_model: str = "embeddinggemma"
     # Embedding provider selector (like marketdata_provider). "auto" = real Ollama Cloud when
     # configured + not use_mocks, else mock. "mock" forces the deterministic mock even when use_mocks is

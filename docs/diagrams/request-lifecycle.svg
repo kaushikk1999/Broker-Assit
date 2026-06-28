@@ -1,0 +1,96 @@
+<svg viewBox="0 0 1280 700" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-labelledby="ttl desc">
+  <title id="ttl">BrokerAssist Request Lifecycle</title>
+  <desc id="desc">Two-phase request lifecycle. Phase one issues an anonymous session: the widget posts its key with the page Origin, the backend verifies the hashed key and Origin allowlist, then returns a signed session JWT. Phase two handles each chat message: verify the token, run the rate-limit and quota security gate before any LLM call, route the intent, process in the market or RAG branch, persist the turn, and return the answer with citations.</desc>
+
+  <defs>
+    <marker id="ay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#d97706"/>
+    </marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#059669"/>
+    </marker>
+    <style>
+      .pa  { rx:14; }
+      .ph  { font-size:15px; font-weight:800; }
+      .sa  { rx:10; fill:#fffbeb; stroke:#d97706; stroke-width:1.5; }
+      .sg  { rx:10; fill:#ecfdf5; stroke:#059669; stroke-width:1.5; }
+      .gate{ rx:10; fill:#fff1f2; stroke:#e11d48; stroke-width:2; }
+      .st  { font-size:12.5px; font-weight:700; fill:#0f172a; }
+      .sd  { font-size:11px; fill:#475569; }
+      .lw  { stroke:#d97706; stroke-width:1.8; fill:none; }
+      .lg  { stroke:#059669; stroke-width:1.8; fill:none; }
+    </style>
+  </defs>
+
+  <text x="640" y="34" text-anchor="middle" font-size="24" font-weight="800" fill="#0f172a">BrokerAssist — Request Lifecycle &amp; Security Gate</text>
+  <text x="640" y="56" text-anchor="middle" font-size="12.5" fill="#64748b">Anonymous visitors: no login. Trust is established per session via widget key + Origin, then enforced per message before any model call.</text>
+
+  <!-- ================= PHASE 1: SESSION ================= -->
+  <rect class="pa" x="40" y="78" width="580" height="36" fill="#fef3c7" stroke="#d97706"/>
+  <text class="ph" x="60" y="102" fill="#92400e">1 · Session issuance  (once per visitor)</text>
+
+  <rect class="sa" x="60" y="128" width="540" height="56"/>
+  <text class="st" x="78" y="150">Widget → POST /api/v1/session</text>
+  <text class="sd" x="78" y="170">body: { widget_key } · header: Origin (the embedding page)</text>
+
+  <rect class="sa" x="60" y="206" width="540" height="60"/>
+  <text class="st" x="78" y="228">authenticate_widget()</text>
+  <text class="sd" x="78" y="248">SHA-256 key lookup in PostgreSQL + Origin matched against</text>
+  <text class="sd" x="78" y="262">the tenant domain allowlist  ·  bad key / origin → abuse event</text>
+
+  <rect class="sa" x="60" y="288" width="540" height="56"/>
+  <text class="st" x="78" y="310">Create Session row · log analytics event</text>
+  <text class="sd" x="78" y="330">ties the visitor to rate limits + per-tenant analytics</text>
+
+  <rect class="sa" x="60" y="366" width="540" height="56"/>
+  <text class="st" x="78" y="388">Issue signed session JWT  (30-min TTL)</text>
+  <text class="sd" x="78" y="408">← { session_token, expires_in } returned to the widget</text>
+
+  <path class="lw" d="M330 184 L330 206" marker-end="url(#ay)"/>
+  <path class="lw" d="M330 266 L330 288" marker-end="url(#ay)"/>
+  <path class="lw" d="M330 344 L330 366" marker-end="url(#ay)"/>
+
+  <!-- handoff arrow between phases -->
+  <path d="M600 394 L640 394 L640 150 L660 150" stroke="#94a3b8" stroke-width="1.8" fill="none" stroke-dasharray="5 4" marker-end="url(#ag)"/>
+  <text x="648" y="270" font-size="10.5" fill="#64748b" transform="rotate(-90 648 270)">session_token reused as Bearer</text>
+
+  <!-- ================= PHASE 2: CHAT ================= -->
+  <rect class="pa" x="660" y="78" width="580" height="36" fill="#d1fae5" stroke="#059669"/>
+  <text class="ph" x="680" y="102" fill="#065f46">2 · Chat turn  (every message)</text>
+
+  <rect class="sg" x="680" y="128" width="540" height="50"/>
+  <text class="st" x="698" y="149">Widget → POST /api/v1/chat</text>
+  <text class="sd" x="698" y="167">body: { message, language? } · header: Bearer session JWT</text>
+
+  <rect class="sg" x="680" y="194" width="540" height="44"/>
+  <text class="st" x="698" y="216">verify JWT → require_session</text>
+  <text class="sd" x="698" y="232">resolves tenant_id + session_id; expired / invalid → 401</text>
+
+  <rect class="gate" x="680" y="254" width="540" height="68"/>
+  <text class="st" x="698" y="276" fill="#9f1239">🔒 SECURITY GATE — before any LLM / translate call</text>
+  <text class="sd" x="698" y="296">rate limits (per-session/min · per-IP/min · sessions/IP/hr)</text>
+  <text class="sd" x="698" y="312">+ per-tenant daily quota — Redis hot counter, PostgreSQL backstop → 429 on breach</text>
+
+  <rect class="sg" x="680" y="338" width="540" height="44"/>
+  <text class="st" x="698" y="360">Detect language · classify intent (router fork)</text>
+  <text class="sd" x="698" y="376">market keyword + symbol → market   ·   else → knowledge</text>
+
+  <rect class="sg" x="680" y="398" width="540" height="48"/>
+  <text class="st" x="698" y="420">Branch processing</text>
+  <text class="sd" x="698" y="438">Market Service (Redis cache)  OR  RAG pipeline (adapters)</text>
+
+  <rect class="sg" x="680" y="462" width="540" height="44"/>
+  <text class="st" x="698" y="484">Persist chat turn (PostgreSQL) · log event</text>
+  <text class="sd" x="698" y="500">conversation + user/assistant messages with intent + branch</text>
+
+  <rect class="sg" x="680" y="522" width="540" height="44"/>
+  <text class="st" x="698" y="544">← Response to widget</text>
+  <text class="sd" x="698" y="560">{ answer, citations, disclaimer, language, intent, branch }</text>
+
+  <path class="lg" d="M950 178 L950 194" marker-end="url(#ag)"/>
+  <path class="lg" d="M950 238 L950 254" marker-end="url(#ag)"/>
+  <path class="lg" d="M950 322 L950 338" marker-end="url(#ag)"/>
+  <path class="lg" d="M950 382 L950 398" marker-end="url(#ag)"/>
+  <path class="lg" d="M950 446 L950 462" marker-end="url(#ag)"/>
+  <path class="lg" d="M950 506 L950 522" marker-end="url(#ag)"/>
+</svg>

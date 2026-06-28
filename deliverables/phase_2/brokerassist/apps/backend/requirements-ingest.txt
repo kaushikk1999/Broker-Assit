@@ -5,7 +5,8 @@
 #
 pypdf>=4.0              # PDF parsing (Google Drive docs / filings)
 python-docx>=1.1.0      # DOCX parsing
-# --- live fetch / crawl (uncomment + wire in app/ingestion/sources/live_sources.py as needed) ---
-# beautifulsoup4>=4.12          # structured HTML parsing (NSE/BSE fallback crawl)
-# playwright>=1.44              # anti-bot / JS-rendered pages (NSE/BSE/NALCO IR)
-# google-api-python-client>=2.0 # Google Drive API (Source 5)
+# --- live fetch / crawl (wired in app/ingestion/sources/live_sources.py) ---
+# NSE (official JSON API) and NALCO IR (server-rendered HTML) use httpx only — already a base dep.
+playwright>=1.44                # BSE: anti-bot/Akamai-fronted page driven via a real browser context
+                                # (after install run: python -m playwright install chromium)
+# google-api-python-client>=2.0 # Google Drive API (Source 5) — not yet wired
