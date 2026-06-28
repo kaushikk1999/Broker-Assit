@@ -15,6 +15,7 @@ NotImplementedError until wired, so enabling them is an explicit, localized chan
 from __future__ import annotations
 
 import hashlib
+import html
 import re
 from datetime import date, datetime
 
@@ -67,12 +68,15 @@ _YEAR_RE = re.compile(r"20\d\d")
 _DMY_RE = re.compile(r"\b(\d{2}/\d{2}/\d{4})\b")
 
 
-def _extract_dated_items(html: str) -> list[str]:
+def _extract_dated_items(markup: str) -> list[str]:
     """Pull list items that look like real dated notices (skip short nav/menu entries). Each becomes
     one knowledge document. Strips tags, collapses whitespace, drops &nbsp; padding."""
     out: list[str] = []
-    for raw in _LI_RE.findall(html or ""):
-        text = _WS_RE.sub(" ", _TAG_RE.sub(" ", raw)).replace("\xa0", " ").strip(" |")
+    for raw in _LI_RE.findall(markup or ""):
+        # Strip tags, then decode HTML entities (WordPress emits &#038; for & and literal &nbsp;
+        # padding) so titles/content are clean human text rather than raw entity codes.
+        text = html.unescape(_TAG_RE.sub(" ", raw))
+        text = _WS_RE.sub(" ", text).replace("\xa0", " ").strip(" |")
         text = _WS_RE.sub(" ", text).strip()
         if len(text) > 30 and _YEAR_RE.search(text):
             out.append(text[:600])
