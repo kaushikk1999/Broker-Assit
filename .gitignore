@@ -1,42 +1,37 @@
-# ───────── OS / editor junk ─────────
-.DS_Store
-Thumbs.db
-*.swp
-.idea/
-.vscode/
-
-# ───────── Python (backend) ─────────
-__pycache__/
-*.py[cod]
+# Python
 .venv/
-venv/
-env/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
 
-# ───────── Node / Next.js (frontend) ─────────
+# Database (dev only — Railway uses Postgres plugin)
+*.db
+*.db.bak
+
+# Secrets — NEVER commit
+.env
+.env.local
+.env.production
+
+# Node / Next.js
 node_modules/
 .next/
 out/
-npm-debug.log*
-yarn-error.log*
-
-# ───────── Secrets / env ─────────
-.env
-.env.*
-!.env.example
-!.env.local.example
-
-# ───────── Local databases ─────────
-*.db
-*.sqlite
-*.sqlite3
-brokerassist.db
-
-# ───────── Build / coverage ─────────
 dist/
-build/
-*.egg-info/
-.coverage
-htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude / AI tooling (not needed for deploy)
+.claude/
+structure/
+.env.backend
